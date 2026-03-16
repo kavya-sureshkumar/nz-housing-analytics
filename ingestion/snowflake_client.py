@@ -1,5 +1,7 @@
+# ingestion/snowflake_client.py
 import snowflake.connector
 import os
+import pandas as pd
 from dotenv import load_dotenv
 from snowflake.connector.pandas_tools import write_pandas
 
@@ -18,8 +20,16 @@ def get_connection():
 def write_dataframe(df, schema, table_name, overwrite=False):
     conn = get_connection()
     conn.cursor().execute(f"USE SCHEMA {schema}")
+
     if overwrite:
         conn.cursor().execute(f"DROP TABLE IF EXISTS {table_name}")
+
+    # Fix datetime columns - convert to string so Snowflake reads them correctly
+    df = df.copy()
+    for col in df.columns:
+        if pd.api.types.is_datetime64_any_dtype(df[col]):
+            df[col] = df[col].dt.strftime('%Y-%m-%d %H:%M:%S')
+
     success, nchunks, nrows, _ = write_pandas(
         conn, df, table_name, auto_create_table=True
     )
