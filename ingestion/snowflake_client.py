@@ -23,6 +23,8 @@ def write_dataframe(df, schema, table_name, overwrite=False):
 
     if overwrite:
         conn.cursor().execute(f"DROP TABLE IF EXISTS {table_name}")
+    
+    df = df.copy().reset_index(drop=True) 
 
     # Fix datetime columns - convert to string so Snowflake reads them correctly
     df = df.copy()
