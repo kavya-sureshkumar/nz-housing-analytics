@@ -88,7 +88,7 @@ def ingest_census():
     print(f"Unique metrics: {df['SECTION_TITLE'].nunique()}")
 
     df = df.reset_index(drop=True)
-    write_dataframe(df, "RAW.STATS_NZ", "CENSUS_2023", overwrite=True)
+    write_dataframe(df, "RAW.LANDING", "STATS_NZ_CENSUS_2023",  overwrite=True)
     print("Done.")
 
 if __name__ == "__main__":

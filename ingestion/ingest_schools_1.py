@@ -39,7 +39,7 @@ def ingest_schools():
     print(df.head(5).to_string())
 
     df = df.reset_index(drop=True)
-    write_dataframe(df, "RAW.MOE", "SCHOOLS", overwrite=True)
+    write_dataframe(df, "RAW.LANDING", "MOE_SCHOOLS", overwrite=True)
     print("Done.")
 
 

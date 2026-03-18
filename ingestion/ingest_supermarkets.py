@@ -32,7 +32,7 @@ def ingest_supermarkets():
     print(df['TOWN_CITY'].value_counts().head(10).to_string())
 
     df = df.reset_index(drop=True)
-    write_dataframe(df, "RAW.LINZ", "SUPERMARKETS", overwrite=True)
+    write_dataframe(df, "RAW.LANDING", "LINZ_SUPERMARKETS", overwrite=True)
     print("Done.")
 
 

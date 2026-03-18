@@ -44,7 +44,7 @@ def ingest_at_stops():
     print(df.head(5).to_string())
 
     df = df.reset_index(drop=True)
-    write_dataframe(df, "RAW.AT", "TRANSIT_STOPS", overwrite=True)
+    write_dataframe(df, "RAW.LANDING", "AT_TRANSIT_STOPS", overwrite=True)
     print("Done.")
 
 

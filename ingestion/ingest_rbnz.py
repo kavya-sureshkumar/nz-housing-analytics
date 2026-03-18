@@ -64,7 +64,7 @@ def ingest_ocr():
     print(f"Date range: {df['DATE'].min()} to {df['DATE'].max()}")
     print(df.tail(5))
 
-    write_dataframe(df, "RAW.RBNZ", "INTEREST_RATES", overwrite=True)
+    write_dataframe(df, "RAW.LANDING", "RBNZ_INTEREST_RATES",   overwrite=True)
     print("Done.")
 
 if __name__ == "__main__":
