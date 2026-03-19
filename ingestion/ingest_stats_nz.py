@@ -41,7 +41,16 @@ AUCKLAND_SUBURBS = [
     'St Johns', 'Sunnyvale', 'Swanson', 'Takanini', 'Takapuna',
     'Three Kings', 'Titirangi', 'Waitakere', 'Waiuku', 'Westgate',
     'Whangaparaoa', 'Wiri', 'Beachlands', 'Clevedon', 'Drury',
-    'Glenbrook', 'Karaka', 'Kumeu', 'Wellsford'
+    'Glenbrook', 'Karaka', 'Kumeu', 'Wellsford', 'Beach Haven', 'Belmont', 'Birkenhead', 'Bucklands Beach',
+    'City Centre', 'Clendon Park', 'Conifer Grove', 'Dannemora',
+    'Forrest Hill', 'Glendene', 'Glendowie', 'Goodwood Heights',
+    'Green Bay', 'Greenlane', 'Hobsonville', 'Laingholm',
+    'Mairangi Bay', 'Mangere Bridge', 'Manly', 'Maraetai',
+    'Milford', 'New Windsor', 'Northpark', 'Red Beach',
+    'Rothesay Bay', 'Royal Heights', 'Snells Beach', 'Stanmore Bay',
+    'Stonefields', 'Sunnynook', 'Te Atatu Peninsula', 'Te Atatu South',
+    'Torbay', 'Tuakau', 'Warkworth', 'Waterview', 'Wattle Downs',
+    'West Harbour', 'Westmere', 'Weymouth'
 ]
 
 def ingest_census():

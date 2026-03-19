@@ -1,0 +1,13 @@
+version: 2
+
+sources:
+  - name: landing
+    database: RAW
+    schema: LANDING
+    tables:
+      - name: RBNZ_INTEREST_RATES
+      - name: BARFOOT_SUBURB_PRICES
+      - name: AT_TRANSIT_STOPS
+      - name: MOE_SCHOOLS
+      - name: STATS_NZ_CENSUS_2023
+      - name: LINZ_SUPERMARKETS

@@ -1,0 +1,13 @@
+version: 2
+models:
+  - name: mart_affordability_index
+    columns:
+      - name: report_date
+        tests:
+          - not_null
+      - name: suburb
+        tests:
+          - not_null
+      - name: avg_sale_price
+        tests:
+          - not_null
