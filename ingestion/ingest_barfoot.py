@@ -95,7 +95,7 @@ def ingest_barfoot(start_year=2018, end_year=2026):
     print(f"\nSample:")
     print(final_df.head(5).to_string())
 
-    write_dataframe(df, "RAW.LANDING", "BARFOOT_SUBURB_PRICES",  overwrite=True)
+    write_dataframe(final_df, "RAW.LANDING", "BARFOOT_SUBURB_PRICES",  overwrite=True)
     print("Done.")
 
 

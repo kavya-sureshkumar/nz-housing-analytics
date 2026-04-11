@@ -1,4 +1,5 @@
 version: 2
+
 models:
   - name: mart_affordability_index
     columns:
@@ -11,3 +12,4 @@ models:
       - name: avg_sale_price
         tests:
           - not_null
+      # affordability_index is intentionally NULL for ~11 suburbs with no census income data

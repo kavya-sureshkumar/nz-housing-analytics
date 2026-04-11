@@ -8,27 +8,33 @@ Built as a portfolio project demonstrating data engineering, transformation, and
 
 ## Dashboard
 
-Built with **Streamlit in Snowflake** - live dashboard querying Snowflake directly with no external BI tooling.
+Built with **Streamlit in Snowflake** — live dashboard querying Snowflake directly with no external BI tooling.
 
-**4 pages:**
-- 📈 Affordability Index Over Time - suburb-level trends 2018-2026
-- 🏘️ Suburb Comparison - price-to-income ratio ranked by suburb
-- 📉 Rate Cycle Story - OCR rate vs average sale price dual-axis chart
-- 🗺️ Suburb Map - bubble map of average sale prices across Auckland
+**5 pages:**
+- 📈 Affordability Over Time — custom affordability index by suburb, 2018–2026
+- 🏘️ Suburb Comparison — price-to-income ratio ranked by suburb
+- 📉 Rate Cycle Story — OCR rate vs average sale price dual-axis chart
+- 🏫 Schools & Amenity — school quality (EQI) and supermarket access by suburb
+- 🏠 Rental Yield — gross rental yield ranked by suburb
 
 ---
 
 ## Key Finding
 
-Auckland's affordability burden remained elevated through 2023-2024 despite a ~23% price correction from the 2021 peak. Rising swap rates (reaching 6%) offset the price decline - a buyer in 2024 faced a similar affordability burden to 2021 despite paying less for the house.
+Auckland's affordability burden remained elevated through 2023–2024 despite a ~23% price correction from the 2021 peak. Rising 2-year swap rates (reaching 6%) offset the price decline — a buyer in 2024 faced a similar affordability burden to 2021 despite paying less for the house.
 
-This is captured by a composite **Affordability Index**:
+This is captured by the **Affordability Index**:
 
 ```
 Affordability Index = Price-to-Income Ratio × (1 + Swap Rate / 100)
+
+Where:
+- Price-to-Income Ratio = avg_sale_price / median_household_income
+- Swap Rate = 2-year NZ swap rate (how banks price mortgages)
+- Higher value = less affordable
 ```
 
-A simple price-to-income ratio misses this. A $1M house at 2% rates costs ~$2,500/month. The same house at 6% rates costs ~$4,500/month. The index captures the lived borrowing cost difference.
+A $1M house at 2.2% swap rate has an effective price-to-income-rate burden roughly half that of the same house at 5.66% — even if the price itself has dropped.
 
 ---
 
@@ -42,23 +48,23 @@ A simple price-to-income ratio misses this. A $1M house at 2% rates costs ~$2,50
                              │ Python ingestion scripts
                              ▼
 ┌─────────────────────────────────────────────────────────────┐
-│              Snowflake - RAW.LANDING                        │
+│              Snowflake — RAW.LANDING                        │
 │  RBNZ_INTEREST_RATES       │  AT_TRANSIT_STOPS              │
 │  STATS_NZ_CENSUS_2023      │  LINZ_SUPERMARKETS             │
 │  BARFOOT_SUBURB_PRICES     │  MOE_SCHOOLS                   │
 └────────────────────────────┬────────────────────────────────┘
-                             │ dbt transformations
+                             │ dbt (6 staging views → 1 mart table)
                              ▼
 ┌─────────────────────────────────────────────────────────────┐
-│           Snowflake - ANALYTICS.MARTS                       │
+│           Snowflake — ANALYTICS.MARTS                       │
 │           MART_AFFORDABILITY_INDEX                          │
-│           10,700 rows │ 82 suburbs │ Jan 2018 - Mar 2026    │
+│           ~10,700 rows │ 82 suburbs │ Jan 2018–Mar 2026     │
 └────────────────────────────┬────────────────────────────────┘
                              │ Snowpark session
                              ▼
 ┌─────────────────────────────────────────────────────────────┐
 │           Streamlit in Snowflake Dashboard                  │
-│           4 pages │ Altair charts │ Browser-based           │
+│           5 pages │ Altair charts │ Browser-based           │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -69,7 +75,7 @@ A simple price-to-income ratio misses this. A $1M house at 2% rates costs ~$2,50
 | Layer | Technology |
 |---|---|
 | Ingestion | Python, snowflake-connector-python |
-| Orchestration | Apache Airflow (Astronomer) - planned |
+| Orchestration | Apache Airflow (Astronomer) — planned |
 | Data Warehouse | Snowflake (Standard, AWS Sydney) |
 | Transformation | dbt Core (dbt-snowflake) |
 | Dashboard | Streamlit in Snowflake, Altair |
@@ -92,8 +98,9 @@ A simple price-to-income ratio misses this. A $1M house at 2% rates costs ~$2,50
 ## Project Structure
 
 ```
-housing-affordability/
+nz-housing-analytics/
 ├── ingestion/
+│   ├── snowflake_client.py       shared Snowflake connection + write utility
 │   ├── ingest_rbnz.py
 │   ├── ingest_stats_nz.py
 │   ├── ingest_barfoot.py
@@ -111,9 +118,17 @@ housing-affordability/
 │   │   │   └── stg_schools.sql
 │   │   └── marts/
 │   │       └── mart_affordability_index.sql
-│   ├── sources.yml
+│   ├── models/staging/sources.yml
+│   ├── tests/affordability_tests.yml
 │   └── dbt_project.yml
-├── streamlit_app.py
+├── docs/
+│   ├── PROJECT_NOTES.md
+│   ├── ARCHITECTURE.md
+│   ├── PRD.md
+│   ├── ISSUES_AND_IMPROVEMENTS.md
+│   ├── INTERVIEW_PREP.md
+│   └── CONCEPTS.md
+├── streamlit_code.py
 ├── .env.example
 └── README.md
 ```
@@ -123,7 +138,8 @@ housing-affordability/
 ## dbt Transformation Design
 
 ### Suburb Name Matching
-Stats NZ census data uses granular SA2 sub-areas (e.g. `mount eden east`, `mount eden north`). Barfoot uses broad suburb names (`mount eden`). The staging model uses regex to strip directional suffixes and averages income across sub-areas:
+
+Stats NZ census data uses granular SA2 sub-areas (e.g. `mount eden north`, `mount eden east`). Barfoot uses broad suburb names (`mount eden`). The staging model uses regex to strip directional suffixes and averages income across sub-areas per parent suburb:
 
 ```sql
 TRIM(
@@ -137,39 +153,38 @@ AVG(CAST(VALUE AS FLOAT)) AS median_household_income
 ```
 
 ### Mt → Mount Conversion
-Barfoot uses `Mt Albert`, Stats NZ uses `Mount Albert`. Handled in the mart:
+
+Barfoot uses `Mt Albert`, Stats NZ uses `Mount Albert`. Handled in all mart joins:
 
 ```sql
 REPLACE(LOWER(TRIM(p.suburb)), 'mt ', 'mount ') = c.suburb
 ```
 
 ### Why Swap Rate, Not OCR
-Banks price mortgages off 2-year swap rates, not the OCR. Swap rates reflect market expectations of future rate movements - they rose in late 2021 before RBNZ had moved at all. A model using OCR would miss this leading indicator.
+
+Banks price mortgages off 2-year swap rates, not the OCR. Swap rates are forward-looking — they rose in late 2021 before RBNZ had moved the OCR at all. A model using OCR would miss this leading indicator effect.
 
 ---
 
 ## Data Coverage & Limitations
 
-- **Date range:** January 2018 - March 2026 (monthly)
+- **Date range:** January 2018 – March 2026 (monthly)
 - **Suburbs:** 82 of 93 Barfoot suburbs with full income data (88% coverage)
-- **11 suburbs with no income data:** Auckland average, City Centre, Flat Bush, Mangere, Mangere Bridge, Otahuhu, Otara, Ranui, St Heliers, Te Atatu Peninsula, Te Atatu South - genuine Stats NZ SA2 boundary gap, not fixable without paid concordance data
-- **Barfoot market share:** ~40% of Auckland sales - known bias toward premium suburbs, mitigated by data quality flags in staging
-- **Low transaction volume:** Premium suburbs like Remuera may have only 2-3 sales in a given month, causing single-month average spikes. In production a minimum transaction count filter and rolling 3-month window would be applied
+- **11 suburbs with no income data:** Auckland average, City Centre, Flat Bush, Mangere, Mangere Bridge, Otahuhu, Otara, Ranui, St Heliers, Te Atatu Peninsula, Te Atatu South — genuine Stats NZ SA2 boundary gap, not fixable without paid concordance data
+- **Barfoot market share:** ~40% of Auckland sales — known bias toward premium suburbs, mitigated by data quality flags in staging
+- **Low transaction volume:** Premium suburbs like Remuera may have only 2–3 sales in a given month, causing single-month average spikes
 
 ---
 
 ## Setup
 
 ### Prerequisites
+
 - Python 3.9+
 - Snowflake account
 - dbt Core with dbt-snowflake adapter
 
 ### Environment Variables
-
-```bash
-cp .env.example .env
-```
 
 ```
 SNOWFLAKE_ACCOUNT=your-account-id
@@ -184,11 +199,11 @@ AT_API_KEY=your-at-api-key
 ### Run Ingestion
 
 ```bash
-pip install snowflake-connector-python pandas requests beautifulsoup4
+pip install snowflake-connector-python pandas requests beautifulsoup4 python-dotenv
 
 python ingestion/ingest_rbnz.py
 python ingestion/ingest_stats_nz.py
-python ingestion/ingest_barfoot.py
+python ingestion/ingest_barfoot.py      # ~90 min (polite 1s delay between requests)
 python ingestion/ingest_at_stops.py
 python ingestion/ingest_supermarkets.py
 python ingestion/ingest_schools.py
@@ -210,7 +225,7 @@ dbt test
 1. Log into `app.snowflake.com`
 2. Left sidebar → **Streamlit** → **+ Streamlit App**
 3. Set warehouse: `HOUSING_WH`, database: `ANALYTICS`, schema: `MARTS`
-4. Paste contents of `streamlit_app.py`
+4. Paste contents of `streamlit_code.py`
 5. Click **Run**
 
 Grant permissions if needed:
@@ -230,25 +245,28 @@ GRANT SELECT ON TABLE ANALYTICS.MARTS.MART_AFFORDABILITY_INDEX TO ROLE ACCOUNTAD
 
 | Column | Type | Description |
 |---|---|---|
-| SUBURB | VARCHAR | Auckland suburb name |
-| DISTRICT | VARCHAR | District grouping |
-| REPORT_DATE | DATE | First day of the month |
+| SUBURB | VARCHAR | Auckland suburb name (lowercase) |
+| DISTRICT | VARCHAR | District grouping from Barfoot |
+| REPORT_DATE | DATE | First day of the reporting month |
 | AVG_SALE_PRICE | FLOAT | Average sale price ($NZD) |
 | AVG_WEEKLY_RENT | FLOAT | Average weekly rent ($NZD) |
 | GROSS_YIELD_PCT | FLOAT | Gross rental yield (%) |
-| MEDIAN_HOUSEHOLD_INCOME | FLOAT | Median annual household income ($NZD) |
+| MEDIAN_HOUSEHOLD_INCOME | FLOAT | Median annual household income ($NZD, 2023 census) |
 | OCR_RATE | FLOAT | RBNZ Official Cash Rate (%) |
 | SWAP_RATE_2YR | FLOAT | 2-year swap rate (%) |
+| SCHOOL_COUNT | INTEGER | Number of active schools in the suburb (MOE) |
+| AVG_EQI_INDEX | FLOAT | Average Education Quality Index across suburb schools |
+| SUPERMARKET_COUNT | INTEGER | Number of supermarkets in the suburb (LINZ) |
 | PRICE_TO_INCOME_RATIO | FLOAT | avg_sale_price / median_household_income |
-| AFFORDABILITY_INDEX | FLOAT | price_to_income_ratio × (1 + swap_rate_2yr/100) |
+| AFFORDABILITY_INDEX | FLOAT | price_to_income_ratio × (1 + swap_rate_2yr / 100) — higher = less affordable |
 
 ---
 
 ## Acknowledgements
 
-- [Reserve Bank of New Zealand](https://www.rbnz.govt.nz) - interest rate data
-- [Stats NZ](https://www.stats.govt.nz) - census income data
-- [Barfoot & Thompson](https://www.barfoot.co.nz) - suburb sale price data
-- [Auckland Transport](https://at.govt.nz) - GTFS transit stop data
-- [LINZ](https://data.linz.govt.nz) - supermarket location data
-- [Ministry of Education](https://www.educationcounts.govt.nz) - school data
+- [Reserve Bank of New Zealand](https://www.rbnz.govt.nz) — interest rate data
+- [Stats NZ](https://www.stats.govt.nz) — census income data
+- [Barfoot & Thompson](https://www.barfoot.co.nz) — suburb sale price data
+- [Auckland Transport](https://at.govt.nz) — GTFS transit stop data
+- [LINZ](https://data.linz.govt.nz) — supermarket location data
+- [Ministry of Education](https://www.educationcounts.govt.nz) — school data

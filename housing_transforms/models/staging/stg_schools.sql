@@ -10,10 +10,10 @@ SELECT
     LOWER(TRIM(ADD1_SUBURB))              AS suburb,
     ADD1_CITY                             AS city,
     TERRITORIAL_AUTHORITY,
-    CAST(LATITUDE  AS FLOAT)              AS lat,
-    CAST(LONGITUDE AS FLOAT)              AS lon,
-    CAST(EQI_INDEX AS FLOAT)              AS eqi_index,
-    CAST(TOTAL     AS INTEGER)            AS roll,
+    TRY_CAST(LATITUDE  AS FLOAT)          AS lat,
+    TRY_CAST(LONGITUDE AS FLOAT)          AS lon,
+    TRY_CAST(EQI_INDEX AS FLOAT)          AS eqi_index,
+    TRY_CAST(TOTAL     AS INTEGER)        AS roll,
     STATUS
 FROM {{ source('landing', 'MOE_SCHOOLS') }}
 WHERE STATUS != 'Closed'
